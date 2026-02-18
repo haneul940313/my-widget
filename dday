@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>D-Day Memo</title>
+  <style>
+    :root{
+      --w: 420px;
+      --text:#111;
+      --muted:#666;
+      --line: rgba(0,0,0,0.12);
+      --field:#f6f7f8;
+      --hover: rgba(0,0,0,0.05);
+    }
+
+    html, body{
+      margin:0; padding:0;
+      background: transparent;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+    }
+
+    .wrap{
+      width:100%;
+      display:flex;
+      justify-content:center;
+      padding:10px 0;
+      box-sizing:border-box;
+    }
+
+    .panel{
+      width: min(var(--w), 100%);
+      background:#fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      box-sizing:border-box;
+    }
+
+    /* 입력 영역 */
+    .form{
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    input{
+      border: 1px solid var(--line);
+      background: var(--field);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+      outline: none;
+      box-sizing: border-box;
+      height: 40px;
+    }
+    input:focus{ background:#fff; }
+
+    #name{
+      flex: 1 1 170px;
+      min-width: 160px;
+    }
+    #date{
+      flex: 1 1 140px;
+      min-width: 140px;
+    }
+
+    button{
+      height: 40px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 12px;
+      padding: 0 14px;
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+      flex: 0 0 auto;
+    }
+    button:hover{ background: var(--hover); }
+
+    .hint{
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    hr{
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 10px 0;
+    }
+
+    /* 리스트 */
+    .list{
+      list-style:none;
+      margin:0;
+      padding:0;
+      max-height: 260px;
+      overflow:auto;
+    }
+
+    .item{
+      display:flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 4px;
+      border-bottom: 1px dashed rgba(0,0,0,0.10);
+      font-size: 13px;
+    }
+    .item:last-child{ border-bottom:none; }
+
+    .left{
+      min-width: 0;
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: baseline;
+    }
+
+    .title{
+      font-weight: 900;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .date{
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .right{
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .empty{
+      padding: 8px 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .footer{
+      margin-top: 8px;
+      font-size: 11px;
+      color: rgba(0,0,0,0.35);
+      text-align: center;
+      user-select: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <!-- 상단: 이름/날짜/등록 -->
+      <div class="form">
+        <input id="name" type="text" maxlength="40" placeholder="이름 입력" />
+        <input id="date" type="date" />
+        <button id="addBtn">등록</button>
+      </div>
+
+      <div class="hint">
+        등록하면 아래에 한 줄씩 쌓여요. (페이지 닫아도 유지)
+      </div>
+
+      <hr />
+
+      <!-- 하단: 리스트 -->
+      <div id="empty" class="empty">아직 등록된 D-Day가 없어요.</div>
+      <ul id="list" class="list"></ul>
+
+      <div class="footer">© 노션하늘</div>
+    </div>
+  </div>
+
+  <script>
+    // 인스턴스 분리(원하면 id=...로 페이지별 독립 가능)
+    const params = new URLSearchParams(location.search);
+    const instanceId = (params.get("id") || "default").trim() || "default";
+    const KEY = `notion_dday_memo:${instanceId}`;
+
+    const $name = document.getElementById("name");
+    const $date = document.getElementById("date");
+    const $add  = document.getElementById("addBtn");
+    const $list = document.getElementById("list");
+    const $empty= document.getElementById("empty");
+
+    /** items: { id, name, date(YYYY-MM-DD), createdAt } */
+    let items = [];
+
+    function startOfDayLocal(d){
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+
+    function diffDays(dateStr){
+      // 로컬 자정 기준 D-day 계산
+      const target = new Date(dateStr + "T00:00:00");
+      const today = startOfDayLocal(new Date());
+      const diffMs = startOfDayLocal(target) - today;
+      return Math.round(diffMs / (24*60*60*1000));
+    }
+
+    function dLabel(n){
+      if (n > 0) return `D-${n}`;
+      if (n === 0) return `D-Day`;
+      return `D+${Math.abs(n)}`;
+    }
+
+    function save(){
+      localStorage.setItem(KEY, JSON.stringify(items));
+    }
+
+    function load(){
+      try{
+        const raw = localStorage.getItem(KEY);
+        if(!raw) return;
+        const data = JSON.parse(raw);
+        if(Array.isArray(data)) items = data;
+      }catch(e){}
+    }
+
+    function render(){
+      $list.innerHTML = "";
+
+      if (!items.length){
+        $empty.style.display = "block";
+        return;
+      }
+      $empty.style.display = "none";
+
+      // 최신 등록이 위로
+      for (let i = items.length - 1; i >= 0; i--){
+        const it = items[i];
+        const n = diffDays(it.date);
+
+        const li = document.createElement("li");
+        li.className = "item";
+
+        const left = document.createElement("div");
+        left.className = "left";
+
+        const title = document.createElement("span");
+        title.className = "title";
+        title.textContent = it.name;
+
+        const date = document.createElement("span");
+        date.className = "date";
+        date.textContent = it.date;
+
+        left.appendChild(title);
+        left.appendChild(date);
+
+        const right = document.createElement("div");
+        right.className = "right";
+        right.textContent = dLabel(n);
+
+        li.appendChild(left);
+        li.appendChild(right);
+        $list.appendChild(li);
+      }
+    }
+
+    function addItem(){
+      const name = ($name.value || "").trim();
+      const date = $date.value;
+
+      if(!name){
+        $name.focus();
+        return;
+      }
+      if(!date){
+        $date.focus();
+        return;
+      }
+
+      items.push({
+        id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
+        name,
+        date,
+        createdAt: Date.now()
+      });
+
+      save();
+      render();
+
+      // 입력 유지/초기화는 취향인데, 이름은 남기고 날짜만 비우는 게 보통 편함
+      $date.value = "";
+    }
+
+    $add.addEventListener("click", addItem);
+    $name.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") addItem();
+    });
+    $date.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") addItem();
+    });
+
+    load();
+    render();
+
+    // 날짜가 바뀌면 D-값 갱신되게 (1시간마다)
+    setInterval(render, 60 * 60 * 1000);
+  </script>
+</body>
+</html>
