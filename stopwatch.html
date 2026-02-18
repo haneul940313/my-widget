@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stopwatch</title>
+  <style>
+    :root{
+      --card:#111;
+      --fg:#fff;
+      --muted:#777;
+      --btn:#000;
+      --btnfg:#fff;
+      --border: rgba(0,0,0,0.08);
+      --w: 520px;
+    }
+
+    html, body{
+      margin:0;
+      padding:0;
+      background: transparent;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .wrap{
+      width:100%;
+      display:flex;
+      justify-content:center;
+      padding: 12px 0;
+      box-sizing:border-box;
+    }
+
+    .panel{
+      width: min(var(--w), 100%);
+      box-sizing:border-box;
+      padding: 14px;
+      border-radius: 16px;
+      background: #fff;
+      border: 1px solid var(--border);
+    }
+
+    .time{
+      background: var(--card);
+      color: var(--fg);
+      border-radius: 16px;
+      padding: 18px 16px;
+      text-align:center;
+      box-shadow: none;
+      user-select:none;
+    }
+
+    .digits{
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 1px;
+      line-height: 1;
+      font-size: clamp(44px, 8vw, 64px);
+    }
+
+    .sub{
+      margin-top: 8px;
+      color: rgba(255,255,255,0.75);
+      font-size: 12px;
+    }
+
+    .row{
+      display:flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    button{
+      appearance:none;
+      border:none;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-weight: 800;
+      font-size: 14px;
+      cursor:pointer;
+      user-select:none;
+      flex: 1 1 140px;
+    }
+
+    .primary{ background: var(--btn); color: var(--btnfg); }
+    .ghost{ background: #f3f4f6; color: #111; }
+    .danger{ background: #111; color: #fff; opacity: .9; }
+
+    button:disabled{
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .meta{
+      margin-top: 10px;
+      display:flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .laps{
+      margin-top: 12px;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+
+    .laps h3{
+      margin: 0 0 8px 0;
+      font-size: 12px;
+      color: #111;
+      letter-spacing: 0.2px;
+    }
+
+    .laplist{
+      margin:0;
+      padding:0;
+      list-style:none;
+      max-height: 220px;
+      overflow:auto;
+    }
+
+    .lapitem{
+      display:flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px dashed var(--border);
+      font-size: 13px;
+    }
+
+    .lapitem:last-child{ border-bottom:none; }
+    .right{ color:#111; font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <div class="time">
+        <div class="digits" id="display">00:00:00</div>
+        <div class="sub" id="status">대기</div>
+      </div>
+
+      <div class="row">
+        <button class="primary" id="startBtn">시작</button>
+        <button class="ghost" id="pauseBtn" disabled>일시정지</button>
+        <button class="danger" id="stopBtn" disabled>정지</button>
+        <button class="ghost" id="lapBtn" disabled>랩(기록)</button>
+      </div>
+
+      <div class="meta">
+        <div>자동 저장: 켜짐</div>
+        <div id="total">누적 0초</div>
+      </div>
+
+      <div class="laps">
+        <h3>오늘 기록</h3>
+        <ul class="laplist" id="lapList"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- 저장 키 ---
+    const KEY = "notion_stopwatch_v1";
+
+    // --- 상태 ---
+    let running = false;
+    let baseElapsedMs = 0;     // 누적(정지/일시정지 포함) ms
+    let startedAt = null;      // running 시작 시각(ms)
+    let rafId = null;
+    let laps = [];             // { ts, elapsedMs } 기록
+
+    // --- 엘리먼트 ---
+    const $display = document.getElementById("display");
+    const $status  = document.getElementById("status");
+    const $total   = document.getElementById("total");
+    const $lapList = document.getElementById("lapList");
+
+    const $start = document.getElementById("startBtn");
+    const $pause = document.getElementById("pauseBtn");
+    const $stop  = document.getElementById("stopBtn");
+    const $lap   = document.getElementById("lapBtn");
+
+    // --- 포맷 ---
+    function fmt(ms){
+      const total = Math.floor(ms / 1000);
+      const h = Math.floor(total / 3600);
+      const m = Math.floor((total % 3600) / 60);
+      const s = total % 60;
+      const hh = String(h).padStart(2,"0");
+      const mm = String(m).padStart(2,"0");
+      const ss = String(s).padStart(2,"0");
+      return `${hh}:${mm}:${ss}`;
+    }
+
+    function fmtTotalSec(ms){
+      const sec = Math.floor(ms/1000);
+      return `누적 ${sec.toLocaleString()}초`;
+    }
+
+    // --- 저장/불러오기 ---
+    function save(){
+      const payload = {
+        running,
+        baseElapsedMs,
+        startedAt, // 실행 중이면 복구용
+        laps
+      };
+      localStorage.setItem(KEY, JSON.stringify(payload));
+    }
+
+    function load(){
+      try{
+        const raw = localStorage.getItem(KEY);
+        if(!raw) return;
+        const data = JSON.parse(raw);
+        running = !!data.running;
+        baseElapsedMs = Number(data.baseElapsedMs || 0);
+        startedAt = data.startedAt ? Number(data.startedAt) : null;
+        laps = Array.isArray(data.laps) ? data.laps : [];
+      }catch(e){}
+    }
+
+    // --- 렌더 ---
+    function currentElapsedMs(){
+      if(!running || startedAt === null) return baseElapsedMs;
+      return baseElapsedMs + (Date.now() - startedAt);
+    }
+
+    function render(){
+      const ms = currentElapsedMs();
+      $display.textContent = fmt(ms);
+      $total.textContent = fmtTotalSec(ms);
+
+      if(running){
+        $status.textContent = "진행 중";
+        $start.disabled = true;
+        $pause.disabled = false;
+        $stop.disabled = false;
+        $lap.disabled = false;
+      }else{
+        $status.textContent = (baseElapsedMs > 0) ? "일시정지" : "대기";
+        $start.disabled = false;
+        $pause.disabled = true;
+        $stop.disabled = (baseElapsedMs === 0);
+        $lap.disabled = (baseElapsedMs === 0);
+      }
+
+      // 랩 리스트
+      $lapList.innerHTML = "";
+      for(let i = laps.length - 1; i >= 0; i--){
+        const item = laps[i];
+        const li = document.createElement("li");
+        li.className = "lapitem";
+        const left = document.createElement("span");
+        const right = document.createElement("span");
+        left.textContent = new Date(item.ts).toLocaleString();
+        right.className = "right";
+        right.textContent = fmt(item.elapsedMs);
+        li.appendChild(left);
+        li.appendChild(right);
+        $lapList.appendChild(li);
+      }
+    }
+
+    // --- 루프 ---
+    function loop(){
+      render();
+      if(running){
+        rafId = requestAnimationFrame(loop);
+      }
+    }
+
+    // --- 액션 ---
+    function start(){
+      if(running) return;
+      running = true;
+      startedAt = Date.now();
+      save();
+      if(rafId) cancelAnimationFrame(rafId);
+      loop();
+    }
+
+    function pause(){
+      if(!running) return;
+      baseElapsedMs = currentElapsedMs();
+      running = false;
+      startedAt = null;
+      save();
+      render();
+    }
+
+    function stop(){
+      // 정지 = 리셋
+      running = false;
+      baseElapsedMs = 0;
+      startedAt = null;
+      laps = [];
+      save();
+      render();
+    }
+
+    function lap(){
+      const ms = currentElapsedMs();
+      laps.push({ ts: Date.now(), elapsedMs: ms });
+      save();
+      render();
+    }
+
+    // --- 이벤트 ---
+    $start.addEventListener("click", start);
+    $pause.addEventListener("click", pause);
+    $stop.addEventListener("click", stop);
+    $lap.addEventListener("click", lap);
+
+    // --- 초기화 ---
+    load();
+
+    // 실행 중이었으면 복구(탭 닫았다가 열어도 계속 흐르게)
+    if(running && startedAt){
+      // startedAt을 과거로 두고 그대로 흐르게
+      // (baseElapsedMs는 이미 누적된 값)
+      if(rafId) cancelAnimationFrame(rafId);
+      loop();
+    }else{
+      running = false;
+      startedAt = null;
+      render();
+    }
+
+    // 주기적으로 저장(안전)
+    setInterval(() => { save(); }, 3000);
+  </script>
+</body>
+</html>
