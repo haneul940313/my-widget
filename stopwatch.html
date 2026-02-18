@@ -11,8 +11,8 @@
       --muted:#777;
       --btn:#000;
       --btnfg:#fff;
-      --border: rgba(0,0,0,0.08);
-      --w: 520px;
+      --border: rgba(0,0,0,0.10);
+      --w: 560px;
     }
 
     html, body{
@@ -45,7 +45,6 @@
       border-radius: 16px;
       padding: 18px 16px;
       text-align:center;
-      box-shadow: none;
       user-select:none;
     }
 
@@ -79,12 +78,12 @@
       font-size: 14px;
       cursor:pointer;
       user-select:none;
-      flex: 1 1 140px;
+      flex: 1 1 150px;
     }
 
     .primary{ background: var(--btn); color: var(--btnfg); }
     .ghost{ background: #f3f4f6; color: #111; }
-    .danger{ background: #111; color: #fff; opacity: .9; }
+    .danger{ background: #111; color: #fff; opacity: .92; }
 
     button:disabled{
       opacity: .45;
@@ -98,6 +97,7 @@
       gap: 10px;
       color: var(--muted);
       font-size: 12px;
+      flex-wrap: wrap;
     }
 
     .laps{
@@ -131,7 +131,20 @@
     }
 
     .lapitem:last-child{ border-bottom:none; }
-    .right{ color:#111; font-variant-numeric: tabular-nums; }
+    .right{
+      color:#111;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .pill{
+      display:inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      color: #111;
+      font-weight: 700;
+    }
   </style>
 </head>
 
@@ -146,67 +159,91 @@
       <div class="row">
         <button class="primary" id="startBtn">시작</button>
         <button class="ghost" id="pauseBtn" disabled>일시정지</button>
-        <button class="danger" id="stopBtn" disabled>정지</button>
         <button class="ghost" id="lapBtn" disabled>랩(기록)</button>
+        <button class="danger" id="resetBtn" disabled>리셋(세션만)</button>
       </div>
 
       <div class="meta">
+        <div><span class="pill">세션</span> <span id="sessionTotal">0초</span></div>
+        <div><span class="pill">누적</span> <span id="grandTotal">0초</span></div>
         <div>자동 저장: 켜짐</div>
-        <div id="total">누적 0초</div>
       </div>
 
       <div class="laps">
-        <h3>오늘 기록</h3>
+        <h3>세션 기록(랩)</h3>
         <ul class="laplist" id="lapList"></ul>
       </div>
     </div>
   </div>
 
   <script>
-    // --- 저장 키 ---
-    const KEY = "notion_stopwatch_v1";
+    const KEY = "notion_stopwatch_v3";
 
-    // --- 상태 ---
     let running = false;
-    let baseElapsedMs = 0;     // 누적(정지/일시정지 포함) ms
-    let startedAt = null;      // running 시작 시각(ms)
-    let rafId = null;
-    let laps = [];             // { ts, elapsedMs } 기록
 
-    // --- 엘리먼트 ---
+    // 세션(현재 작업) 누적
+    let sessionBaseMs = 0;
+    let sessionStartedAt = null;
+
+    // 누적(총합)
+    let grandTotalMs = 0;
+
+    // 랩(세션 기록)
+    let laps = [];
+
+    let rafId = null;
+
     const $display = document.getElementById("display");
     const $status  = document.getElementById("status");
-    const $total   = document.getElementById("total");
+    const $sessionTotal = document.getElementById("sessionTotal");
+    const $grandTotal = document.getElementById("grandTotal");
     const $lapList = document.getElementById("lapList");
 
     const $start = document.getElementById("startBtn");
     const $pause = document.getElementById("pauseBtn");
-    const $stop  = document.getElementById("stopBtn");
     const $lap   = document.getElementById("lapBtn");
+    const $reset = document.getElementById("resetBtn");
 
-    // --- 포맷 ---
-    function fmt(ms){
+    function fmtHMS(ms){
       const total = Math.floor(ms / 1000);
       const h = Math.floor(total / 3600);
       const m = Math.floor((total % 3600) / 60);
       const s = total % 60;
-      const hh = String(h).padStart(2,"0");
-      const mm = String(m).padStart(2,"0");
-      const ss = String(s).padStart(2,"0");
-      return `${hh}:${mm}:${ss}`;
+      return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
     }
 
-    function fmtTotalSec(ms){
-      const sec = Math.floor(ms/1000);
-      return `누적 ${sec.toLocaleString()}초`;
+    // 일/시/분/초 (0인 단위 숨김, 초는 항상 표시)
+    function fmtUnits(ms){
+      let sec = Math.floor(ms / 1000);
+
+      const days = Math.floor(sec / 86400);
+      sec %= 86400;
+
+      const hours = Math.floor(sec / 3600);
+      sec %= 3600;
+
+      const mins = Math.floor(sec / 60);
+      sec %= 60;
+
+      const parts = [];
+      if (days > 0) parts.push(`${days}일`);
+      if (hours > 0) parts.push(`${hours}시간`);
+      if (mins > 0) parts.push(`${mins}분`);
+      parts.push(`${sec}초`);
+      return parts.join(" ");
     }
 
-    // --- 저장/불러오기 ---
+    function sessionNowMs(){
+      if(!running || sessionStartedAt === null) return sessionBaseMs;
+      return sessionBaseMs + (Date.now() - sessionStartedAt);
+    }
+
     function save(){
       const payload = {
         running,
-        baseElapsedMs,
-        startedAt, // 실행 중이면 복구용
+        sessionBaseMs,
+        sessionStartedAt,
+        grandTotalMs,
         laps
       };
       localStorage.setItem(KEY, JSON.stringify(payload));
@@ -217,68 +254,64 @@
         const raw = localStorage.getItem(KEY);
         if(!raw) return;
         const data = JSON.parse(raw);
+
         running = !!data.running;
-        baseElapsedMs = Number(data.baseElapsedMs || 0);
-        startedAt = data.startedAt ? Number(data.startedAt) : null;
+        sessionBaseMs = Number(data.sessionBaseMs || 0);
+        sessionStartedAt = data.sessionStartedAt ? Number(data.sessionStartedAt) : null;
+
+        grandTotalMs = Number(data.grandTotalMs || 0);
         laps = Array.isArray(data.laps) ? data.laps : [];
       }catch(e){}
     }
 
-    // --- 렌더 ---
-    function currentElapsedMs(){
-      if(!running || startedAt === null) return baseElapsedMs;
-      return baseElapsedMs + (Date.now() - startedAt);
-    }
-
     function render(){
-      const ms = currentElapsedMs();
-      $display.textContent = fmt(ms);
-      $total.textContent = fmtTotalSec(ms);
+      const sMs = sessionNowMs();
+
+      $display.textContent = fmtHMS(sMs);
+      $sessionTotal.textContent = fmtUnits(sMs);
+      $grandTotal.textContent = fmtUnits(grandTotalMs);
 
       if(running){
         $status.textContent = "진행 중";
-        $start.disabled = true;
-        $pause.disabled = false;
-        $stop.disabled = false;
-        $lap.disabled = false;
       }else{
-        $status.textContent = (baseElapsedMs > 0) ? "일시정지" : "대기";
-        $start.disabled = false;
-        $pause.disabled = true;
-        $stop.disabled = (baseElapsedMs === 0);
-        $lap.disabled = (baseElapsedMs === 0);
+        $status.textContent = (sessionBaseMs > 0) ? "일시정지" : "대기";
       }
 
-      // 랩 리스트
+      $start.disabled = running;
+      $pause.disabled = !running;
+
+      const hasSession = (sessionBaseMs > 0) || running;
+      $lap.disabled = !hasSession;
+      $reset.disabled = !hasSession;
+
       $lapList.innerHTML = "";
       for(let i = laps.length - 1; i >= 0; i--){
         const item = laps[i];
         const li = document.createElement("li");
         li.className = "lapitem";
+
         const left = document.createElement("span");
         const right = document.createElement("span");
-        left.textContent = new Date(item.ts).toLocaleString();
         right.className = "right";
-        right.textContent = fmt(item.elapsedMs);
+
+        left.textContent = new Date(item.ts).toLocaleString();
+        right.textContent = fmtHMS(item.sessionMs);
+
         li.appendChild(left);
         li.appendChild(right);
         $lapList.appendChild(li);
       }
     }
 
-    // --- 루프 ---
     function loop(){
       render();
-      if(running){
-        rafId = requestAnimationFrame(loop);
-      }
+      if(running) rafId = requestAnimationFrame(loop);
     }
 
-    // --- 액션 ---
     function start(){
       if(running) return;
       running = true;
-      startedAt = Date.now();
+      sessionStartedAt = Date.now();
       save();
       if(rafId) cancelAnimationFrame(rafId);
       loop();
@@ -286,52 +319,63 @@
 
     function pause(){
       if(!running) return;
-      baseElapsedMs = currentElapsedMs();
-      running = false;
-      startedAt = null;
-      save();
-      render();
-    }
 
-    function stop(){
-      // 정지 = 리셋
+      // 세션 누적 반영
+      const now = Date.now();
+      const delta = now - sessionStartedAt;
+
+      sessionBaseMs += delta;
+      grandTotalMs += delta;
+
       running = false;
-      baseElapsedMs = 0;
-      startedAt = null;
-      laps = [];
+      sessionStartedAt = null;
+
       save();
       render();
     }
 
     function lap(){
-      const ms = currentElapsedMs();
-      laps.push({ ts: Date.now(), elapsedMs: ms });
+      const sMs = sessionNowMs();
+      laps.push({ ts: Date.now(), sessionMs: sMs });
       save();
       render();
     }
 
-    // --- 이벤트 ---
+    function resetSession(){
+      // 세션만 0 + 랩 비움, 누적은 유지
+      if(running){
+        // running 중이면 먼저 pause로 누적 반영
+        pause();
+      }
+      sessionBaseMs = 0;
+      sessionStartedAt = null;
+      running = false;
+      laps = [];
+      save();
+      render();
+      $status.textContent = "세션 리셋 완료";
+    }
+
     $start.addEventListener("click", start);
     $pause.addEventListener("click", pause);
-    $stop.addEventListener("click", stop);
     $lap.addEventListener("click", lap);
+    $reset.addEventListener("click", resetSession);
 
-    // --- 초기화 ---
+    // 초기화
     load();
 
-    // 실행 중이었으면 복구(탭 닫았다가 열어도 계속 흐르게)
-    if(running && startedAt){
-      // startedAt을 과거로 두고 그대로 흐르게
-      // (baseElapsedMs는 이미 누적된 값)
+    // 실행 중이었던 경우 복구: “닫혀 있던 시간”도 흐른 것으로 세션/누적에 포함
+    if(running && sessionStartedAt){
+      // 저장된 sessionStartedAt 기준으로 계속 진행 상태로 렌더 루프
       if(rafId) cancelAnimationFrame(rafId);
+      loop;
       loop();
     }else{
       running = false;
-      startedAt = null;
+      sessionStartedAt = null;
       render();
     }
 
-    // 주기적으로 저장(안전)
     setInterval(() => { save(); }, 3000);
   </script>
 </body>
