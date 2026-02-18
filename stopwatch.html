@@ -6,13 +6,11 @@
   <title>Stopwatch</title>
   <style>
     :root{
-      --card:#111;
-      --fg:#fff;
-      --muted:#777;
-      --btn:#000;
-      --btnfg:#fff;
-      --border: rgba(0,0,0,0.10);
-      --w: 560px;
+      --text:#111;
+      --muted:#666;
+      --line: rgba(0,0,0,0.10);
+      --btnHover: rgba(0,0,0,0.06);
+      --w: 720px;
     }
 
     html, body{
@@ -20,188 +18,155 @@
       padding:0;
       background: transparent;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
     }
 
     .wrap{
-      width:100%;
+      width: 100%;
       display:flex;
       justify-content:center;
-      padding: 12px 0;
+      padding: 10px 0;
       box-sizing:border-box;
     }
 
-    .panel{
+    .bar{
       width: min(var(--w), 100%);
       box-sizing:border-box;
-      padding: 14px;
-      border-radius: 16px;
+      padding: 10px 12px;
+      border-radius: 14px;
       background: #fff;
-      border: 1px solid var(--border);
+      border: 1px solid var(--line);
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      flex-wrap: wrap;
     }
 
     .time{
-      background: var(--card);
-      color: var(--fg);
-      border-radius: 16px;
-      padding: 18px 16px;
-      text-align:center;
-      user-select:none;
-    }
-
-    .digits{
       font-weight: 900;
       font-variant-numeric: tabular-nums;
-      letter-spacing: 1px;
+      letter-spacing: 0.6px;
       line-height: 1;
-      font-size: clamp(44px, 8vw, 64px);
-    }
-
-    .sub{
-      margin-top: 8px;
-      color: rgba(255,255,255,0.75);
-      font-size: 12px;
-    }
-
-    .row{
-      display:flex;
-      gap: 10px;
-      margin-top: 12px;
-      flex-wrap: wrap;
-    }
-
-    button{
-      appearance:none;
-      border:none;
-      border-radius: 14px;
-      padding: 12px 14px;
-      font-weight: 800;
-      font-size: 14px;
-      cursor:pointer;
-      user-select:none;
-      flex: 1 1 150px;
-    }
-
-    .primary{ background: var(--btn); color: var(--btnfg); }
-    .ghost{ background: #f3f4f6; color: #111; }
-    .danger{ background: #111; color: #fff; opacity: .92; }
-
-    button:disabled{
-      opacity: .45;
-      cursor: not-allowed;
-    }
-
-    .meta{
-      margin-top: 10px;
-      display:flex;
-      justify-content: space-between;
-      gap: 10px;
-      color: var(--muted);
-      font-size: 12px;
-      flex-wrap: wrap;
-    }
-
-    .laps{
-      margin-top: 12px;
-      border-top: 1px solid var(--border);
-      padding-top: 10px;
-    }
-
-    .laps h3{
-      margin: 0 0 8px 0;
-      font-size: 12px;
-      color: #111;
-      letter-spacing: 0.2px;
-    }
-
-    .laplist{
-      margin:0;
-      padding:0;
-      list-style:none;
-      max-height: 220px;
-      overflow:auto;
-    }
-
-    .lapitem{
-      display:flex;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 8px 0;
-      border-bottom: 1px dashed var(--border);
-      font-size: 13px;
-    }
-
-    .lapitem:last-child{ border-bottom:none; }
-    .right{
-      color:#111;
-      font-variant-numeric: tabular-nums;
+      font-size: clamp(28px, 5.5vw, 40px);
       white-space: nowrap;
     }
 
-    .pill{
-      display:inline-block;
-      padding: 4px 8px;
+    .controls{
+      display:flex;
+      align-items:center;
+      gap: 6px;
+    }
+
+    /* ✅ 배경 거의 없음 */
+    button{
+      appearance:none;
+      border: 1px solid transparent;
+      background: transparent;
+      border-radius: 12px;
+      width: 38px;
+      height: 36px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      user-select:none;
+      font-size: 18px;
+      line-height: 1;
+      padding: 0;
+    }
+    button:hover{
+      background: var(--btnHover);
+      border-color: var(--line);
+    }
+    button:disabled{
+      opacity: .35;
+      cursor: not-allowed;
+    }
+
+    .total{
+      margin-left: auto;
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+      display:flex;
+      align-items:baseline;
+      gap: 6px;
+    }
+    .total b{
+      color: var(--text);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .laps{
+      width: min(var(--w), 100%);
+      box-sizing:border-box;
+      margin-top: 8px;
+      padding: 0 2px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .lapline{
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      max-height: 120px;
+      overflow:auto;
+    }
+    .chip{
+      border: 1px solid var(--line);
+      background: transparent;
       border-radius: 999px;
-      background: #f3f4f6;
-      color: #111;
+      padding: 6px 10px;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
       font-weight: 700;
+      white-space: nowrap;
     }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="panel">
-      <div class="time">
-        <div class="digits" id="display">00:00:00</div>
-        <div class="sub" id="status">대기</div>
-      </div>
+    <div style="width: min(720px, 100%);">
+      <div class="bar">
+        <div class="time" id="display">00:00:00</div>
 
-      <div class="row">
-        <button class="primary" id="startBtn">시작</button>
-        <button class="ghost" id="pauseBtn" disabled>일시정지</button>
-        <button class="ghost" id="lapBtn" disabled>랩(기록)</button>
-        <button class="danger" id="resetBtn" disabled>리셋(세션만)</button>
-      </div>
+        <div class="controls" aria-label="controls">
+          <button id="startBtn" title="Start" aria-label="Start">▶️</button>
+          <button id="pauseBtn" title="Pause" aria-label="Pause" disabled>⏸️</button>
+          <button id="lapBtn" title="Lap" aria-label="Lap" disabled>🕒</button>
+          <button id="resetBtn" title="Reset" aria-label="Reset" disabled>↩️</button>
+        </div>
 
-      <div class="meta">
-        <div><span class="pill">세션</span> <span id="sessionTotal">0초</span></div>
-        <div><span class="pill">누적</span> <span id="grandTotal">0초</span></div>
-        <div>자동 저장: 켜짐</div>
+        <div class="total">
+          <span>누적</span>
+          <b id="totalText">0초</b>
+        </div>
       </div>
 
       <div class="laps">
-        <h3>세션 기록(랩)</h3>
-        <ul class="laplist" id="lapList"></ul>
+        <div class="lapline" id="lapLine"></div>
       </div>
     </div>
   </div>
 
   <script>
-    const KEY = "notion_stopwatch_v3";
+    const KEY = "notion_stopwatch_simple_v2";
 
     let running = false;
-
-    // 세션(현재 작업) 누적
-    let sessionBaseMs = 0;
-    let sessionStartedAt = null;
-
-    // 누적(총합)
-    let grandTotalMs = 0;
-
-    // 랩(세션 기록)
+    let elapsedMs = 0;
+    let startedAt = null;
     let laps = [];
-
     let rafId = null;
 
     const $display = document.getElementById("display");
-    const $status  = document.getElementById("status");
-    const $sessionTotal = document.getElementById("sessionTotal");
-    const $grandTotal = document.getElementById("grandTotal");
-    const $lapList = document.getElementById("lapList");
+    const $total = document.getElementById("totalText");
+    const $lapLine = document.getElementById("lapLine");
 
     const $start = document.getElementById("startBtn");
     const $pause = document.getElementById("pauseBtn");
-    const $lap   = document.getElementById("lapBtn");
+    const $lap = document.getElementById("lapBtn");
     const $reset = document.getElementById("resetBtn");
 
     function fmtHMS(ms){
@@ -212,7 +177,6 @@
       return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
     }
 
-    // 일/시/분/초 (0인 단위 숨김, 초는 항상 표시)
     function fmtUnits(ms){
       let sec = Math.floor(ms / 1000);
 
@@ -233,20 +197,13 @@
       return parts.join(" ");
     }
 
-    function sessionNowMs(){
-      if(!running || sessionStartedAt === null) return sessionBaseMs;
-      return sessionBaseMs + (Date.now() - sessionStartedAt);
+    function nowMs(){
+      if(!running || startedAt === null) return elapsedMs;
+      return elapsedMs + (Date.now() - startedAt);
     }
 
     function save(){
-      const payload = {
-        running,
-        sessionBaseMs,
-        sessionStartedAt,
-        grandTotalMs,
-        laps
-      };
-      localStorage.setItem(KEY, JSON.stringify(payload));
+      localStorage.setItem(KEY, JSON.stringify({ running, elapsedMs, startedAt, laps }));
     }
 
     function load(){
@@ -254,52 +211,31 @@
         const raw = localStorage.getItem(KEY);
         if(!raw) return;
         const data = JSON.parse(raw);
-
         running = !!data.running;
-        sessionBaseMs = Number(data.sessionBaseMs || 0);
-        sessionStartedAt = data.sessionStartedAt ? Number(data.sessionStartedAt) : null;
-
-        grandTotalMs = Number(data.grandTotalMs || 0);
+        elapsedMs = Number(data.elapsedMs || 0);
+        startedAt = data.startedAt ? Number(data.startedAt) : null;
         laps = Array.isArray(data.laps) ? data.laps : [];
       }catch(e){}
     }
 
     function render(){
-      const sMs = sessionNowMs();
-
-      $display.textContent = fmtHMS(sMs);
-      $sessionTotal.textContent = fmtUnits(sMs);
-      $grandTotal.textContent = fmtUnits(grandTotalMs);
-
-      if(running){
-        $status.textContent = "진행 중";
-      }else{
-        $status.textContent = (sessionBaseMs > 0) ? "일시정지" : "대기";
-      }
+      const ms = nowMs();
+      $display.textContent = fmtHMS(ms);
+      $total.textContent = fmtUnits(ms);
 
       $start.disabled = running;
       $pause.disabled = !running;
 
-      const hasSession = (sessionBaseMs > 0) || running;
-      $lap.disabled = !hasSession;
-      $reset.disabled = !hasSession;
+      const hasAny = ms > 0 || running;
+      $lap.disabled = !hasAny;
+      $reset.disabled = !hasAny;
 
-      $lapList.innerHTML = "";
+      $lapLine.innerHTML = "";
       for(let i = laps.length - 1; i >= 0; i--){
-        const item = laps[i];
-        const li = document.createElement("li");
-        li.className = "lapitem";
-
-        const left = document.createElement("span");
-        const right = document.createElement("span");
-        right.className = "right";
-
-        left.textContent = new Date(item.ts).toLocaleString();
-        right.textContent = fmtHMS(item.sessionMs);
-
-        li.appendChild(left);
-        li.appendChild(right);
-        $lapList.appendChild(li);
+        const chip = document.createElement("div");
+        chip.className = "chip";
+        chip.textContent = fmtHMS(laps[i]);
+        $lapLine.appendChild(chip);
       }
     }
 
@@ -311,7 +247,7 @@
     function start(){
       if(running) return;
       running = true;
-      sessionStartedAt = Date.now();
+      startedAt = Date.now();
       save();
       if(rafId) cancelAnimationFrame(rafId);
       loop();
@@ -319,64 +255,46 @@
 
     function pause(){
       if(!running) return;
-
-      // 세션 누적 반영
-      const now = Date.now();
-      const delta = now - sessionStartedAt;
-
-      sessionBaseMs += delta;
-      grandTotalMs += delta;
-
+      elapsedMs = nowMs();
       running = false;
-      sessionStartedAt = null;
-
+      startedAt = null;
       save();
       render();
     }
 
     function lap(){
-      const sMs = sessionNowMs();
-      laps.push({ ts: Date.now(), sessionMs: sMs });
+      const ms = nowMs();
+      laps.push(ms);
       save();
       render();
     }
 
-    function resetSession(){
-      // 세션만 0 + 랩 비움, 누적은 유지
-      if(running){
-        // running 중이면 먼저 pause로 누적 반영
-        pause();
-      }
-      sessionBaseMs = 0;
-      sessionStartedAt = null;
+    function resetAll(){
       running = false;
+      elapsedMs = 0;
+      startedAt = null;
       laps = [];
       save();
       render();
-      $status.textContent = "세션 리셋 완료";
     }
 
     $start.addEventListener("click", start);
     $pause.addEventListener("click", pause);
     $lap.addEventListener("click", lap);
-    $reset.addEventListener("click", resetSession);
+    $reset.addEventListener("click", resetAll);
 
-    // 초기화
     load();
 
-    // 실행 중이었던 경우 복구: “닫혀 있던 시간”도 흐른 것으로 세션/누적에 포함
-    if(running && sessionStartedAt){
-      // 저장된 sessionStartedAt 기준으로 계속 진행 상태로 렌더 루프
+    if(running && startedAt){
       if(rafId) cancelAnimationFrame(rafId);
-      loop;
       loop();
     }else{
       running = false;
-      sessionStartedAt = null;
+      startedAt = null;
       render();
     }
 
-    setInterval(() => { save(); }, 3000);
+    setInterval(save, 3000);
   </script>
 </body>
 </html>
