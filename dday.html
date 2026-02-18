@@ -67,7 +67,7 @@
       min-width: 140px;
     }
 
-    button{
+    button.add{
       height: 40px;
       border: 1px solid var(--line);
       background: #fff;
@@ -78,7 +78,7 @@
       user-select: none;
       flex: 0 0 auto;
     }
-    button:hover{ background: var(--hover); }
+    button.add:hover{ background: var(--hover); }
 
     .hint{
       margin-top: 8px;
@@ -127,10 +127,40 @@
       word-break: break-word;
     }
 
-    .date{
+    .dateWrap{
+      display:flex;
+      align-items:center;
+      gap: 6px;
       color: var(--muted);
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
+    }
+
+    /* ✅ 삭제 버튼: 기본은 숨김, hover 때만 보임 */
+    .del{
+      appearance:none;
+      border: none;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(1px);
+    }
+    .item:hover .del{
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ✅ 모바일(hover 없는 환경)에서는 항상 보이게 */
+    @media (hover: none){
+      .del{
+        opacity: 1;
+        pointer-events: auto;
+      }
     }
 
     .right{
@@ -162,12 +192,10 @@
       <div class="form">
         <input id="name" type="text" maxlength="40" placeholder="이름 입력" />
         <input id="date" type="date" />
-        <button id="addBtn">등록</button>
+        <button class="add" id="addBtn">등록</button>
       </div>
 
-      <div class="hint">
-        등록하면 아래에 한 줄씩 쌓여요. (페이지 닫아도 유지)
-      </div>
+      <div class="hint">등록하면 아래에 한 줄씩 쌓여요.</div>
 
       <hr />
 
@@ -180,7 +208,7 @@
   </div>
 
   <script>
-    // 인스턴스 분리(원하면 id=...로 페이지별 독립 가능)
+    // 페이지별 분리 원하면 id=... 사용 가능
     const params = new URLSearchParams(location.search);
     const instanceId = (params.get("id") || "default").trim() || "default";
     const KEY = `notion_dday_memo:${instanceId}`;
@@ -199,7 +227,6 @@
     }
 
     function diffDays(dateStr){
-      // 로컬 자정 기준 D-day 계산
       const target = new Date(dateStr + "T00:00:00");
       const today = startOfDayLocal(new Date());
       const diffMs = startOfDayLocal(target) - today;
@@ -223,6 +250,12 @@
         const data = JSON.parse(raw);
         if(Array.isArray(data)) items = data;
       }catch(e){}
+    }
+
+    function removeItem(id){
+      items = items.filter(it => it.id !== id);
+      save();
+      render();
     }
 
     function render(){
@@ -249,12 +282,29 @@
         title.className = "title";
         title.textContent = it.name;
 
-        const date = document.createElement("span");
-        date.className = "date";
-        date.textContent = it.date;
+        const dateWrap = document.createElement("span");
+        dateWrap.className = "dateWrap";
+
+        const dateText = document.createElement("span");
+        dateText.textContent = it.date;
+
+        // ⓧ 날짜 뒤 삭제 버튼 (동그란 X)
+        const delBtn = document.createElement("button");
+        delBtn.className = "del";
+        delBtn.type = "button";
+        delBtn.textContent = "ⓧ";
+        delBtn.setAttribute("aria-label", "Delete");
+        delBtn.title = "Delete";
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          removeItem(it.id);
+        });
+
+        dateWrap.appendChild(dateText);
+        dateWrap.appendChild(delBtn);
 
         left.appendChild(title);
-        left.appendChild(date);
+        left.appendChild(dateWrap);
 
         const right = document.createElement("div");
         right.className = "right";
@@ -270,41 +320,27 @@
       const name = ($name.value || "").trim();
       const date = $date.value;
 
-      if(!name){
-        $name.focus();
-        return;
-      }
-      if(!date){
-        $date.focus();
-        return;
-      }
+      if(!name){ $name.focus(); return; }
+      if(!date){ $date.focus(); return; }
 
-      items.push({
-        id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
-        name,
-        date,
-        createdAt: Date.now()
-      });
+      const id = (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
 
+      items.push({ id, name, date, createdAt: Date.now() });
       save();
       render();
 
-      // 입력 유지/초기화는 취향인데, 이름은 남기고 날짜만 비우는 게 보통 편함
+      // 날짜만 비움(이름은 유지)
       $date.value = "";
     }
 
     $add.addEventListener("click", addItem);
-    $name.addEventListener("keydown", (e) => {
-      if(e.key === "Enter") addItem();
-    });
-    $date.addEventListener("keydown", (e) => {
-      if(e.key === "Enter") addItem();
-    });
+    $name.addEventListener("keydown", (e) => { if(e.key === "Enter") addItem(); });
+    $date.addEventListener("keydown", (e) => { if(e.key === "Enter") addItem(); });
 
     load();
     render();
 
-    // 날짜가 바뀌면 D-값 갱신되게 (1시간마다)
+    // 하루 지나면 D-값 바뀌니까 주기 갱신
     setInterval(render, 60 * 60 * 1000);
   </script>
 </body>
