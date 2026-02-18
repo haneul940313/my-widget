@@ -10,7 +10,9 @@
       --muted:#666;
       --line: rgba(0,0,0,0.10);
       --hover: rgba(0,0,0,0.06);
-      --w: 720px;
+
+      /* ✅ 가로 너무 길지 않게 */
+      --w: 420px;
     }
 
     html, body{
@@ -32,37 +34,40 @@
     .panel{
       width: min(var(--w), 100%);
       box-sizing:border-box;
-      padding: 10px 12px;
+      padding: 12px 12px 10px 12px;
       background: #fff;
       border: 1px solid var(--line);
       border-radius: 14px;
     }
 
-    /* 1) 시계 */
+    /* 1) 시계: ✅ 중앙 정렬 */
     .time{
+      text-align: center;
       font-weight: 900;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.8px;
       line-height: 1;
-      font-size: clamp(34px, 6.5vw, 46px);
+      font-size: clamp(36px, 9vw, 52px);
       white-space: nowrap;
-      padding: 6px 2px 10px 2px;
+      padding: 8px 0 12px 0;
     }
 
     /* 2) 버튼/누적 */
     .bar{
       display:flex;
       align-items:center;
+      justify-content: center;
       gap: 10px;
-      padding: 8px 2px;
+      padding: 10px 0;
       border-top: 1px solid var(--line);
       border-bottom: 1px solid var(--line);
+      flex-wrap: wrap; /* ✅ 좁은 폭이면 아래로 떨어지게 */
     }
 
     .controls{
       display:flex;
       align-items:center;
-      gap: 8px;
+      gap: 10px;
     }
 
     /* 배경 거의 없이 */
@@ -72,7 +77,7 @@
       background: transparent;
       border-radius: 12px;
       width: 40px;
-      height: 36px;
+      height: 38px;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -93,13 +98,12 @@
     }
 
     .total{
-      margin-left: auto;
       font-size: 13px;
       color: var(--muted);
-      white-space: nowrap;
       display:flex;
       align-items:baseline;
       gap: 6px;
+      white-space: nowrap;
     }
     .total b{
       color: var(--text);
@@ -107,26 +111,46 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* 3) 랩 */
+    /* 3) 랩: 타임스냅 리스트 */
     .laps{
       padding-top: 10px;
     }
-    .lapline{
-      display:flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      max-height: 140px;
+
+    .laplist{
+      margin:0;
+      padding:0;
+      list-style:none;
+      max-height: 180px;
       overflow:auto;
     }
-    .chip{
-      border: 1px solid var(--line);
-      background: transparent;
-      border-radius: 999px;
-      padding: 6px 10px;
-      color: var(--text);
-      font-variant-numeric: tabular-nums;
-      font-weight: 700;
+
+    .lapitem{
+      display:flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      padding: 8px 2px;
+      border-bottom: 1px dashed var(--line);
+      font-size: 12px;
+    }
+    .lapitem:last-child{ border-bottom:none; }
+
+    .lapLeft{
+      color: var(--muted);
       white-space: nowrap;
+    }
+    .lapRight{
+      color: var(--text);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    /* 랩 없을 때 안내 */
+    .empty{
+      color: var(--muted);
+      font-size: 12px;
+      padding: 8px 2px 2px 2px;
     }
   </style>
 </head>
@@ -142,7 +166,7 @@
         <div class="controls" aria-label="controls">
           <button id="startBtn" title="Start" aria-label="Start">▶</button>
           <button id="pauseBtn" title="Pause" aria-label="Pause" disabled>⏸</button>
-          <button id="lapBtn" title="Lap" aria-label="Lap" disabled>⌚</button>
+          <button id="lapBtn" title="Lap" aria-label="Lap" disabled>📝</button>
           <button id="resetBtn" title="Reset" aria-label="Reset" disabled>↺</button>
         </div>
 
@@ -154,23 +178,28 @@
 
       <!-- 3) 랩 -->
       <div class="laps">
-        <div class="lapline" id="lapLine"></div>
+        <div class="empty" id="emptyText">랩을 누르면 기록이 쌓여요.</div>
+        <ul class="laplist" id="lapList"></ul>
       </div>
     </div>
   </div>
 
   <script>
-    const KEY = "notion_stopwatch_layout_v1";
+    const KEY = "notion_stopwatch_layout_v2";
 
     let running = false;
     let elapsedMs = 0;
     let startedAt = null;
+
+    // ✅ 타임스냅: { ts, ms }
     let laps = [];
+
     let rafId = null;
 
     const $display = document.getElementById("display");
     const $total = document.getElementById("totalText");
-    const $lapLine = document.getElementById("lapLine");
+    const $lapList = document.getElementById("lapList");
+    const $empty = document.getElementById("emptyText");
 
     const $start = document.getElementById("startBtn");
     const $pause = document.getElementById("pauseBtn");
@@ -185,6 +214,7 @@
       return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
     }
 
+    // 일/시/분/초 (0단위 숨김, 초는 항상 표시)
     function fmtUnits(ms){
       let sec = Math.floor(ms / 1000);
 
@@ -226,6 +256,36 @@
       }catch(e){}
     }
 
+    function renderLaps(){
+      $lapList.innerHTML = "";
+
+      if (!laps.length){
+        $empty.style.display = "block";
+        return;
+      }
+      $empty.style.display = "none";
+
+      // 최신이 위로
+      for(let i = laps.length - 1; i >= 0; i--){
+        const item = laps[i];
+
+        const li = document.createElement("li");
+        li.className = "lapitem";
+
+        const left = document.createElement("span");
+        left.className = "lapLeft";
+        left.textContent = new Date(item.ts).toLocaleString();
+
+        const right = document.createElement("span");
+        right.className = "lapRight";
+        right.textContent = fmtHMS(item.ms);
+
+        li.appendChild(left);
+        li.appendChild(right);
+        $lapList.appendChild(li);
+      }
+    }
+
     function render(){
       const ms = nowMs();
       $display.textContent = fmtHMS(ms);
@@ -238,13 +298,7 @@
       $lap.disabled = !hasAny;
       $reset.disabled = !hasAny;
 
-      $lapLine.innerHTML = "";
-      for(let i = laps.length - 1; i >= 0; i--){
-        const chip = document.createElement("div");
-        chip.className = "chip";
-        chip.textContent = fmtHMS(laps[i]);
-        $lapLine.appendChild(chip);
-      }
+      renderLaps();
     }
 
     function loop(){
@@ -272,7 +326,7 @@
 
     function lap(){
       const ms = nowMs();
-      laps.push(ms);
+      laps.push({ ts: Date.now(), ms });
       save();
       render();
     }
@@ -293,6 +347,7 @@
 
     load();
 
+    // running 상태면 닫혀있던 시간까지 포함해서 계속 진행
     if(running && startedAt){
       if(rafId) cancelAnimationFrame(rafId);
       loop();
