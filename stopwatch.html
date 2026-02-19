@@ -10,8 +10,6 @@
       --muted:#666;
       --line: rgba(0,0,0,0.10);
       --hover: rgba(0,0,0,0.06);
-
-      /* 가로 너무 길지 않게 */
       --w: 420px;
     }
 
@@ -40,7 +38,6 @@
       border-radius: 14px;
     }
 
-    /* 1) 시계: 중앙 정렬 */
     .time{
       text-align: center;
       font-weight: 900;
@@ -52,7 +49,6 @@
       padding: 8px 0 12px 0;
     }
 
-    /* 2) 버튼/누적 */
     .bar{
       display:flex;
       align-items:center;
@@ -61,7 +57,7 @@
       padding: 10px 0;
       border-top: 1px solid var(--line);
       border-bottom: 1px solid var(--line);
-      flex-wrap: wrap; /* 좁은 폭이면 아래로 떨어지게 */
+      flex-wrap: wrap;
     }
 
     .controls{
@@ -110,7 +106,6 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* 3) 랩: 타임스냅 리스트 */
     .laps{
       padding-top: 10px;
     }
@@ -150,23 +145,22 @@
       font-size: 12px;
       padding: 8px 2px 2px 2px;
     }
+
     .credit{
-  margin-top: 8px;
-  font-size: 11px;
-  color: rgba(0,0,0,0.35);
-  text-align: center;
-  user-select: none;
-}
+      margin-top: 8px;
+      font-size: 11px;
+      color: rgba(0,0,0,0.35);
+      text-align: center;
+      user-select: none;
+    }
   </style>
 </head>
 
 <body>
   <div class="wrap">
     <div class="panel">
-      <!-- 1) 시계 -->
       <div class="time" id="display">00:00:00</div>
 
-      <!-- 2) 버튼/누적 -->
       <div class="bar">
         <div class="controls" aria-label="controls">
           <button id="startBtn" title="Start" aria-label="Start">▶</button>
@@ -181,32 +175,32 @@
         </div>
       </div>
 
-      <!-- 3) 랩 -->
       <div class="laps">
-  <div class="empty" id="emptyText">랩을 누르면 기록이 쌓여요.</div>
-  <ul class="laplist" id="lapList"></ul>
-  <div class="credit">© 노션하늘</div>
-</div>
+        <div class="empty" id="emptyText">랩을 누르면 기록이 쌓여요.</div>
+        <ul class="laplist" id="lapList"></ul>
+        <div class="credit">© 노션하늘</div>
+      </div>
     </div>
   </div>
 
   <script>
-    // ✅ 핵심: URL의 id로 인스턴스 분리
-    // 예: stopwatch.html?id=page1  → KEY = notion_stopwatch:page1
     function getInstanceId(){
       const params = new URLSearchParams(location.search);
       const id = (params.get("id") || "").trim();
-      return id || "default"; // id 없으면 기존처럼 default
+      return id || "default";
     }
     const INSTANCE_ID = getInstanceId();
-    const KEY = `notion_stopwatch:${INSTANCE_ID}`;
+    const KEY = `notion_stopwatch:${INSTANCE_ID}:v2`; // v2로 올려서 기존 랩데이터와 분리
 
     let running = false;
-    let elapsedMs = 0;
+    let elapsedMs = 0;     // 전체 경과(누적)
     let startedAt = null;
 
-    // 타임스냅: { ts, ms }
+    // ✅ 랩은 "구간 시간" 저장: { ts, lapMs }
     let laps = [];
+
+    // ✅ 직전 랩 누른 시점의 누적(ms)
+    let lastLapTotalMs = 0;
 
     let rafId = null;
 
@@ -228,18 +222,11 @@
       return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
     }
 
-    // 일/시/분/초 (0단위 숨김, 초는 항상 표시)
     function fmtUnits(ms){
       let sec = Math.floor(ms / 1000);
-
-      const days = Math.floor(sec / 86400);
-      sec %= 86400;
-
-      const hours = Math.floor(sec / 3600);
-      sec %= 3600;
-
-      const mins = Math.floor(sec / 60);
-      sec %= 60;
+      const days = Math.floor(sec / 86400); sec %= 86400;
+      const hours = Math.floor(sec / 3600); sec %= 3600;
+      const mins = Math.floor(sec / 60); sec %= 60;
 
       const parts = [];
       if (days > 0) parts.push(`${days}일`);
@@ -255,7 +242,9 @@
     }
 
     function save(){
-      localStorage.setItem(KEY, JSON.stringify({ running, elapsedMs, startedAt, laps }));
+      localStorage.setItem(KEY, JSON.stringify({
+        running, elapsedMs, startedAt, laps, lastLapTotalMs
+      }));
     }
 
     function load(){
@@ -267,6 +256,7 @@
         elapsedMs = Number(data.elapsedMs || 0);
         startedAt = data.startedAt ? Number(data.startedAt) : null;
         laps = Array.isArray(data.laps) ? data.laps : [];
+        lastLapTotalMs = Number(data.lastLapTotalMs || 0);
       }catch(e){}
     }
 
@@ -292,7 +282,8 @@
 
         const right = document.createElement("span");
         right.className = "lapRight";
-        right.textContent = fmtHMS(item.ms);
+        // ✅ 여기에는 구간 시간만
+        right.textContent = fmtHMS(item.lapMs);
 
         li.appendChild(left);
         li.appendChild(right);
@@ -339,8 +330,12 @@
     }
 
     function lap(){
-      const ms = nowMs();
-      laps.push({ ts: Date.now(), ms });
+      const totalMs = nowMs();
+      const lapMs = Math.max(0, totalMs - lastLapTotalMs);
+
+      laps.push({ ts: Date.now(), lapMs });
+      lastLapTotalMs = totalMs;
+
       save();
       render();
     }
@@ -350,6 +345,7 @@
       elapsedMs = 0;
       startedAt = null;
       laps = [];
+      lastLapTotalMs = 0;
       save();
       render();
     }
@@ -361,7 +357,6 @@
 
     load();
 
-    // running이면 닫혀 있던 시간까지 포함해 계속 진행
     if(running && startedAt){
       if(rafId) cancelAnimationFrame(rafId);
       loop();
