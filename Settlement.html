@@ -1,264 +1,471 @@
-import React, { useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { NotebookPen, CalendarDays, Wallet, ReceiptText, MinusCircle, RotateCcw, Trash2, Plus } from "lucide-react";
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>정산 메모 위젯</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+      background: #f5f5f7;
+      color: #111827;
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 24px;
+      box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
+    }
+    .form-card {
+      padding: 24px;
+      position: sticky;
+      top: 24px;
+    }
+    .label-top {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 30px;
+      line-height: 1.2;
+      margin: 0 0 20px;
+    }
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .input {
+      width: 100%;
+      height: 46px;
+      border: 1px solid #d1d5db;
+      border-radius: 14px;
+      padding: 0 14px;
+      font-size: 15px;
+      outline: none;
+      background: #fff;
+    }
+    .input:focus {
+      border-color: #111827;
+      box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+    }
+    .money-wrap {
+      position: relative;
+    }
+    .money-wrap span {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .money-wrap .input {
+      padding-left: 34px;
+    }
+    .remain-box {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 20px;
+      padding: 18px;
+      margin-top: 6px;
+      margin-bottom: 18px;
+    }
+    .remain-box .small {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+    .remain-box .big {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.1;
+      word-break: break-all;
+    }
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    button {
+      height: 46px;
+      border-radius: 14px;
+      border: 1px solid #d1d5db;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+    .btn-primary {
+      background: #111827;
+      color: #fff;
+      border-color: #111827;
+    }
+    .btn-primary:hover { opacity: 0.92; }
+    .btn-secondary {
+      background: #fff;
+      color: #111827;
+    }
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+    .right { display: grid; gap: 24px; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .summary-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 8px 22px rgba(17, 24, 39, 0.05);
+    }
+    .summary-card .small {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+    .summary-card .big {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.15;
+      word-break: break-all;
+    }
+    .list-card {
+      padding: 24px;
+    }
+    .list-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+    .empty {
+      padding: 44px 18px;
+      text-align: center;
+      color: #6b7280;
+      border: 1px dashed #d1d5db;
+      border-radius: 20px;
+      background: #fafafa;
+    }
+    .item {
+      border: 1px solid #e5e7eb;
+      border-radius: 22px;
+      padding: 18px;
+      background: #fff;
+    }
+    .item + .item { margin-top: 12px; }
+    .item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .item-date {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+    .item-title {
+      font-size: 21px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .delete-btn {
+      width: 42px;
+      min-width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      background: #fff;
+    }
+    .item-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .mini-box {
+      background: #f9fafb;
+      border: 1px solid #eceff3;
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .mini-box .small {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+    .mini-box .big {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.25;
+      word-break: break-all;
+    }
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr; }
+      .form-card { position: static; }
+      .summary-grid, .item-grid { grid-template-columns: 1fr; }
+      .wrap { padding: 16px; }
+      h1 { font-size: 26px; }
+      .remain-box .big, .summary-card .big { font-size: 26px; }
+      .item-title { font-size: 19px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="grid">
+      <section class="card form-card">
+        <div class="label-top">정산 메모 위젯</div>
+        <h1>정산 기록 입력</h1>
 
-const formatNumber = (value: string | number) => {
-  const num = typeof value === "number" ? value : Number(String(value).replace(/,/g, ""));
-  if (!num && num !== 0) return "";
-  return num.toLocaleString("ko-KR");
-};
-
-const toNumber = (value: string) => {
-  const cleaned = String(value).replace(/[^0-9.-]/g, "");
-  return cleaned === "" ? 0 : Number(cleaned);
-};
-
-const todayString = () => {
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-};
-
-function MoneyInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
-  return (
-    <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₩</span>
-      <Input
-        value={value}
-        inputMode="numeric"
-        placeholder={placeholder}
-        className="pl-8 h-11 rounded-2xl"
-        onChange={(e) => {
-          const numeric = e.target.value.replace(/[^0-9]/g, "");
-          onChange(numeric ? formatNumber(numeric) : "");
-        }}
-      />
-    </div>
-  );
-}
-
-export default function SettlementWidget() {
-  const [form, setForm] = useState({
-    date: todayString(),
-    title: "",
-    currentAmount: "",
-    settlementAmount: "",
-  });
-
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      date: todayString(),
-      title: "샘플 정산",
-      currentAmount: 250000,
-      settlementAmount: 80000,
-    },
-  ]);
-
-  const remainingAmount = useMemo(() => {
-    return toNumber(form.currentAmount) - toNumber(form.settlementAmount);
-  }, [form.currentAmount, form.settlementAmount]);
-
-  const totalCurrent = items.reduce((sum, item) => sum + item.currentAmount, 0);
-  const totalSettlement = items.reduce((sum, item) => sum + item.settlementAmount, 0);
-  const totalRemaining = items.reduce((sum, item) => sum + (item.currentAmount - item.settlementAmount), 0);
-
-  const addItem = () => {
-    if (!form.title.trim()) return;
-    setItems((prev) => [
-      {
-        id: Date.now(),
-        date: form.date,
-        title: form.title,
-        currentAmount: toNumber(form.currentAmount),
-        settlementAmount: toNumber(form.settlementAmount),
-      },
-      ...prev,
-    ]);
-    setForm({
-      date: todayString(),
-      title: "",
-      currentAmount: "",
-      settlementAmount: "",
-    });
-  };
-
-  const resetForm = () => {
-    setForm({
-      date: todayString(),
-      title: "",
-      currentAmount: "",
-      settlementAmount: "",
-    });
-  };
-
-  const removeItem = (id: number) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  return (
-    <div className="min-h-screen bg-neutral-100 p-4 md:p-8">
-      <div className="mx-auto max-w-5xl grid gap-6 lg:grid-cols-[380px_1fr]">
-        <Card className="rounded-[28px] border-0 shadow-lg bg-white/95 backdrop-blur">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-neutral-500">
-              <NotebookPen className="h-4 w-4" />
-              <span className="text-sm">정산 메모 위젯</span>
-            </div>
-            <CardTitle className="text-2xl font-semibold tracking-tight">정산 기록 입력</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">날짜</label>
-              <div className="relative">
-                <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="date"
-                  value={form.date}
-                  className="pl-10 h-11 rounded-2xl"
-                  onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">제목</label>
-              <div className="relative">
-                <ReceiptText className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={form.title}
-                  placeholder="예: 3월 외주 정산"
-                  className="pl-10 h-11 rounded-2xl"
-                  onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">현재금액</label>
-              <MoneyInput
-                value={form.currentAmount}
-                placeholder="현재 보유 금액"
-                onChange={(value) => setForm((prev) => ({ ...prev, currentAmount: value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">정산금액</label>
-              <MoneyInput
-                value={form.settlementAmount}
-                placeholder="이번 정산 금액"
-                onChange={(value) => setForm((prev) => ({ ...prev, settlementAmount: value }))}
-              />
-            </div>
-
-            <div className="rounded-3xl bg-neutral-50 p-4 border border-neutral-200">
-              <div className="flex items-center gap-2 text-sm text-neutral-500 mb-2">
-                <MinusCircle className="h-4 w-4" />
-                남은금액
-              </div>
-              <div className="text-3xl font-semibold tracking-tight">
-                ₩ {formatNumber(remainingAmount)}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <Button className="h-11 rounded-2xl" onClick={addItem}>
-                <Plus className="h-4 w-4 mr-1" />
-                등록
-              </Button>
-              <Button variant="outline" className="h-11 rounded-2xl" onClick={resetForm}>
-                <RotateCcw className="h-4 w-4 mr-1" />
-                초기화
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Card className="rounded-[24px] border-0 shadow-md">
-              <CardContent className="p-5">
-                <div className="text-sm text-neutral-500">총 현재금액</div>
-                <div className="mt-2 text-2xl font-semibold">₩ {formatNumber(totalCurrent)}</div>
-              </CardContent>
-            </Card>
-            <Card className="rounded-[24px] border-0 shadow-md">
-              <CardContent className="p-5">
-                <div className="text-sm text-neutral-500">총 정산금액</div>
-                <div className="mt-2 text-2xl font-semibold">₩ {formatNumber(totalSettlement)}</div>
-              </CardContent>
-            </Card>
-            <Card className="rounded-[24px] border-0 shadow-md">
-              <CardContent className="p-5">
-                <div className="text-sm text-neutral-500">총 남은금액</div>
-                <div className="mt-2 text-2xl font-semibold">₩ {formatNumber(totalRemaining)}</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="rounded-[28px] border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <Wallet className="h-5 w-5" />
-                정산 메모장
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {items.length === 0 ? (
-                  <div className="rounded-3xl border border-dashed p-10 text-center text-neutral-500">
-                    등록된 정산 내역이 없습니다.
-                  </div>
-                ) : (
-                  items.map((item) => {
-                    const remain = item.currentAmount - item.settlementAmount;
-                    return (
-                      <div
-                        key={item.id}
-                        className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm"
-                      >
-                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                          <div className="space-y-3 flex-1">
-                            <div className="text-sm text-neutral-500">{item.date}</div>
-                            <div className="text-xl font-semibold">{item.title}</div>
-                            <div className="grid gap-3 sm:grid-cols-3">
-                              <div className="rounded-2xl bg-neutral-50 p-3">
-                                <div className="text-xs text-neutral-500">현재금액</div>
-                                <div className="mt-1 font-semibold">₩ {formatNumber(item.currentAmount)}</div>
-                              </div>
-                              <div className="rounded-2xl bg-neutral-50 p-3">
-                                <div className="text-xs text-neutral-500">정산금액</div>
-                                <div className="mt-1 font-semibold">₩ {formatNumber(item.settlementAmount)}</div>
-                              </div>
-                              <div className="rounded-2xl bg-neutral-50 p-3">
-                                <div className="text-xs text-neutral-500">남은금액</div>
-                                <div className="mt-1 font-semibold">₩ {formatNumber(remain)}</div>
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full"
-                            onClick={() => removeItem(item.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </CardContent>
-          </Card>
+        <div class="field">
+          <label for="date">날짜</label>
+          <input id="date" class="input" type="date" />
         </div>
-      </div>
+
+        <div class="field">
+          <label for="title">제목</label>
+          <input id="title" class="input" type="text" placeholder="예: 3월 외주 정산" />
+        </div>
+
+        <div class="field">
+          <label for="currentAmount">현재금액</label>
+          <div class="money-wrap">
+            <span>₩</span>
+            <input id="currentAmount" class="input money-input" type="text" inputmode="numeric" placeholder="현재 보유 금액" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="settlementAmount">정산금액</label>
+          <div class="money-wrap">
+            <span>₩</span>
+            <input id="settlementAmount" class="input money-input" type="text" inputmode="numeric" placeholder="이번 정산 금액" />
+          </div>
+        </div>
+
+        <div class="remain-box">
+          <div class="small">남은금액</div>
+          <div id="remainingAmount" class="big">₩ 0</div>
+        </div>
+
+        <div class="btn-row">
+          <button id="addBtn" class="btn-primary">등록</button>
+          <button id="resetBtn" class="btn-secondary" type="button">초기화</button>
+        </div>
+      </section>
+
+      <section class="right">
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="small">총 현재금액</div>
+            <div id="totalCurrent" class="big">₩ 0</div>
+          </div>
+          <div class="summary-card">
+            <div class="small">총 정산금액</div>
+            <div id="totalSettlement" class="big">₩ 0</div>
+          </div>
+          <div class="summary-card">
+            <div class="small">총 남은금액</div>
+            <div id="totalRemaining" class="big">₩ 0</div>
+          </div>
+        </div>
+
+        <div class="card list-card">
+          <div class="list-title">정산 메모장</div>
+          <div id="list"></div>
+        </div>
+      </section>
     </div>
-  );
-}
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'settlement-widget-items';
+
+    const dateInput = document.getElementById('date');
+    const titleInput = document.getElementById('title');
+    const currentInput = document.getElementById('currentAmount');
+    const settlementInput = document.getElementById('settlementAmount');
+    const remainingAmountEl = document.getElementById('remainingAmount');
+    const totalCurrentEl = document.getElementById('totalCurrent');
+    const totalSettlementEl = document.getElementById('totalSettlement');
+    const totalRemainingEl = document.getElementById('totalRemaining');
+    const listEl = document.getElementById('list');
+    const addBtn = document.getElementById('addBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function getToday() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function parseNumber(value) {
+      return Number(String(value || '').replace(/[^0-9.-]/g, '')) || 0;
+    }
+
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString('ko-KR');
+    }
+
+    function formatInputValue(value) {
+      const numeric = String(value).replace(/[^0-9]/g, '');
+      return numeric ? Number(numeric).toLocaleString('ko-KR') : '';
+    }
+
+    function loadItems() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [
+          { id: Date.now(), date: getToday(), title: '샘플 정산', currentAmount: 250000, settlementAmount: 80000 }
+        ];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    let items = loadItems();
+
+    function saveItems() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function updateRemainingPreview() {
+      const current = parseNumber(currentInput.value);
+      const settlement = parseNumber(settlementInput.value);
+      const remain = current - settlement;
+      remainingAmountEl.textContent = `₩ ${formatNumber(remain)}`;
+    }
+
+    function updateSummary() {
+      const totalCurrent = items.reduce((sum, item) => sum + item.currentAmount, 0);
+      const totalSettlement = items.reduce((sum, item) => sum + item.settlementAmount, 0);
+      const totalRemaining = items.reduce((sum, item) => sum + (item.currentAmount - item.settlementAmount), 0);
+
+      totalCurrentEl.textContent = `₩ ${formatNumber(totalCurrent)}`;
+      totalSettlementEl.textContent = `₩ ${formatNumber(totalSettlement)}`;
+      totalRemainingEl.textContent = `₩ ${formatNumber(totalRemaining)}`;
+    }
+
+    function renderList() {
+      if (!items.length) {
+        listEl.innerHTML = '<div class="empty">등록된 정산 내역이 없습니다.</div>';
+        updateSummary();
+        return;
+      }
+
+      listEl.innerHTML = items.map(item => {
+        const remain = item.currentAmount - item.settlementAmount;
+        return `
+          <div class="item">
+            <div class="item-top">
+              <div>
+                <div class="item-date">${item.date}</div>
+                <div class="item-title">${escapeHtml(item.title)}</div>
+              </div>
+              <button class="delete-btn" data-id="${item.id}" type="button">삭제</button>
+            </div>
+            <div class="item-grid">
+              <div class="mini-box">
+                <div class="small">현재금액</div>
+                <div class="big">₩ ${formatNumber(item.currentAmount)}</div>
+              </div>
+              <div class="mini-box">
+                <div class="small">정산금액</div>
+                <div class="big">₩ ${formatNumber(item.settlementAmount)}</div>
+              </div>
+              <div class="mini-box">
+                <div class="small">남은금액</div>
+                <div class="big">₩ ${formatNumber(remain)}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      listEl.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+          const id = Number(this.dataset.id);
+          items = items.filter(item => item.id !== id);
+          saveItems();
+          renderList();
+        });
+      });
+
+      updateSummary();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function resetForm() {
+      dateInput.value = getToday();
+      titleInput.value = '';
+      currentInput.value = '';
+      settlementInput.value = '';
+      updateRemainingPreview();
+    }
+
+    dateInput.value = getToday();
+
+    [currentInput, settlementInput].forEach(input => {
+      input.addEventListener('input', e => {
+        e.target.value = formatInputValue(e.target.value);
+        updateRemainingPreview();
+      });
+    });
+
+    addBtn.addEventListener('click', function () {
+      const title = titleInput.value.trim();
+      if (!title) {
+        alert('제목을 입력해줘.');
+        titleInput.focus();
+        return;
+      }
+
+      const newItem = {
+        id: Date.now(),
+        date: dateInput.value || getToday(),
+        title,
+        currentAmount: parseNumber(currentInput.value),
+        settlementAmount: parseNumber(settlementInput.value)
+      };
+
+      items.unshift(newItem);
+      saveItems();
+      renderList();
+      resetForm();
+    });
+
+    resetBtn.addEventListener('click', resetForm);
+
+    updateRemainingPreview();
+    renderList();
+  </script>
+</body>
+</html>
