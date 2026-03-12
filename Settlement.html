@@ -8,293 +8,228 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
-      background: #f5f5f7;
-      color: #111827;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background: #f7f7f8;
+      color: #111;
     }
     .wrap {
-      max-width: 1100px;
+      max-width: 680px;
       margin: 0 auto;
-      padding: 24px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 24px;
-      align-items: start;
+      padding: 16px;
     }
     .card {
       background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 24px;
-      box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
+      border: 1px solid #e9e9ec;
+      border-radius: 18px;
+      padding: 16px;
     }
-    .form-card {
-      padding: 24px;
-      position: sticky;
-      top: 24px;
+    .title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 12px;
     }
-    .label-top {
-      font-size: 13px;
-      color: #6b7280;
-      margin-bottom: 8px;
+    
+    .total-box span {
+      display: block;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
     }
-    h1 {
-      font-size: 30px;
-      line-height: 1.2;
-      margin: 0 0 20px;
+    .total-box strong {
+      display: block;
+      font-size: 28px;
+      line-height: 1.1;
+      color: #111;
     }
-    .field { margin-bottom: 16px; }
+    .field { margin-bottom: 12px; }
     .field label {
       display: block;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      color: #444;
     }
     .input {
       width: 100%;
-      height: 46px;
-      border: 1px solid #d1d5db;
-      border-radius: 14px;
-      padding: 0 14px;
-      font-size: 15px;
+      height: 40px;
+      border: 1px solid #d8d8de;
+      border-radius: 10px;
+      padding: 0 12px;
+      font-size: 14px;
       outline: none;
       background: #fff;
     }
     .input:focus {
-      border-color: #111827;
-      box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+      border-color: #111;
     }
     .money-wrap {
       position: relative;
     }
     .money-wrap span {
       position: absolute;
-      left: 14px;
+      left: 12px;
       top: 50%;
       transform: translateY(-50%);
-      color: #6b7280;
-      font-size: 14px;
+      font-size: 13px;
+      color: #666;
     }
     .money-wrap .input {
-      padding-left: 34px;
+      padding-left: 28px;
     }
-    .remain-box {
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 20px;
-      padding: 18px;
-      margin-top: 6px;
-      margin-bottom: 18px;
-    }
-    .remain-box .small {
+    .remain {
+      margin-top: 4px;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #f4f4f6;
       font-size: 13px;
-      color: #6b7280;
-      margin-bottom: 8px;
+      color: #555;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
-    .remain-box .big {
-      font-size: 32px;
-      font-weight: 700;
-      line-height: 1.1;
-      word-break: break-all;
+    .remain strong {
+      font-size: 14px;
+      color: #111;
     }
     .btn-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      display: flex;
+      gap: 8px;
     }
     button {
-      height: 46px;
-      border-radius: 14px;
-      border: 1px solid #d1d5db;
-      font-size: 15px;
+      height: 38px;
+      padding: 0 14px;
+      border: 1px solid #d8d8de;
+      border-radius: 10px;
+      background: #fff;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: 0.15s ease;
     }
-    .btn-primary {
-      background: #111827;
+    .primary {
+      background: #111;
       color: #fff;
-      border-color: #111827;
+      border-color: #111;
     }
-    .btn-primary:hover { opacity: 0.92; }
-    .btn-secondary {
-      background: #fff;
-      color: #111827;
+    .total-box {
+      margin-top: 12px;
+      font-size: 14px;
+      color: #333;
     }
-    .btn-secondary:hover {
-      background: #f9fafb;
-    }
-    .right { display: grid; gap: 24px; }
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
-    }
-    .summary-card {
-      padding: 18px;
-      border-radius: 20px;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      box-shadow: 0 8px 22px rgba(17, 24, 39, 0.05);
-    }
-    .summary-card .small {
-      font-size: 13px;
-      color: #6b7280;
-      margin-bottom: 8px;
-    }
-    .summary-card .big {
-      font-size: 28px;
-      font-weight: 700;
-      line-height: 1.15;
-      word-break: break-all;
-    }
-    .list-card {
-      padding: 24px;
-    }
-    .list-title {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 18px;
-    }
-    .empty {
-      padding: 44px 18px;
-      text-align: center;
-      color: #6b7280;
-      border: 1px dashed #d1d5db;
-      border-radius: 20px;
-      background: #fafafa;
+    .list {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
     .item {
-      border: 1px solid #e5e7eb;
-      border-radius: 22px;
-      padding: 18px;
+      border: 1px solid #e9e9ec;
+      border-radius: 14px;
+      padding: 14px;
       background: #fff;
     }
-    .item + .item { margin-top: 12px; }
     .item-top {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 12px;
-      margin-bottom: 14px;
+      gap: 10px;
+      margin-bottom: 10px;
     }
     .item-date {
-      font-size: 13px;
-      color: #6b7280;
-      margin-bottom: 6px;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
     }
     .item-title {
-      font-size: 21px;
+      font-size: 16px;
       font-weight: 700;
-      line-height: 1.3;
-    }
-    .delete-btn {
-      width: 42px;
-      min-width: 42px;
-      height: 42px;
-      border-radius: 999px;
-      background: #fff;
+      line-height: 1.35;
     }
     .item-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
+      gap: 8px;
     }
-    .mini-box {
-      background: #f9fafb;
-      border: 1px solid #eceff3;
-      border-radius: 16px;
-      padding: 14px;
-    }
-    .mini-box .small {
+    .mini {
+      background: #f7f7f8;
+      border-radius: 10px;
+      padding: 10px;
       font-size: 12px;
-      color: #6b7280;
-      margin-bottom: 6px;
+      color: #555;
     }
-    .mini-box .big {
-      font-size: 18px;
-      font-weight: 700;
-      line-height: 1.25;
+    .mini strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 14px;
+      color: #111;
       word-break: break-all;
     }
-    @media (max-width: 920px) {
-      .grid { grid-template-columns: 1fr; }
-      .form-card { position: static; }
-      .summary-grid, .item-grid { grid-template-columns: 1fr; }
-      .wrap { padding: 16px; }
-      h1 { font-size: 26px; }
-      .remain-box .big, .summary-card .big { font-size: 26px; }
-      .item-title { font-size: 19px; }
+    .empty {
+      border: 1px dashed #d8d8de;
+      border-radius: 14px;
+      padding: 24px 12px;
+      text-align: center;
+      color: #777;
+      background: #fff;
+    }
+    .delete-btn {
+      height: 32px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+    @media (max-width: 640px) {
+      .wrap { padding: 12px; }
+      .item-grid { grid-template-columns: 1fr; }
+      .title { font-size: 17px; }
+      .total-box strong { font-size: 24px; }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="grid">
-      <section class="card form-card">
-        <div class="label-top">정산 메모 위젯</div>
-        <h1>정산 기록 입력</h1>
+    <div class="card">
+      <h1 class="title">정산 메모장</h1>
 
-        <div class="field">
-          <label for="date">날짜</label>
-          <input id="date" class="input" type="date" />
-        </div>
+      
 
-        <div class="field">
-          <label for="title">제목</label>
-          <input id="title" class="input" type="text" placeholder="예: 3월 외주 정산" />
-        </div>
+      <div class="field">
+        <label for="date">날짜</label>
+        <input id="date" class="input" type="date" />
+      </div>
 
-        <div class="field">
-          <label for="currentAmount">현재금액</label>
-          <div class="money-wrap">
-            <span>₩</span>
-            <input id="currentAmount" class="input money-input" type="text" inputmode="numeric" placeholder="현재 보유 금액" />
-          </div>
-        </div>
+      <div class="field">
+        <label for="title">제목</label>
+        <input id="title" class="input" type="text" placeholder="예: 3월 외주 정산" />
+      </div>
 
-        <div class="field">
-          <label for="settlementAmount">정산금액</label>
-          <div class="money-wrap">
-            <span>₩</span>
-            <input id="settlementAmount" class="input money-input" type="text" inputmode="numeric" placeholder="이번 정산 금액" />
-          </div>
+      <div class="field">
+        <label for="currentAmount">현재금액</label>
+        <div class="money-wrap">
+          <span>₩</span>
+          <input id="currentAmount" class="input money-input" type="text" inputmode="numeric" placeholder="현재금액" />
         </div>
+      </div>
 
-        <div class="remain-box">
-          <div class="small">남은금액</div>
-          <div id="remainingAmount" class="big">₩ 0</div>
+      <div class="field">
+        <label for="settlementAmount">정산금액</label>
+        <div class="money-wrap">
+          <span>₩</span>
+          <input id="settlementAmount" class="input money-input" type="text" inputmode="numeric" placeholder="정산금액" />
         </div>
+      </div>
 
-        <div class="btn-row">
-          <button id="addBtn" class="btn-primary">등록</button>
-          <button id="resetBtn" class="btn-secondary" type="button">초기화</button>
-        </div>
-      </section>
+      <div class="remain"><span>남은금액</span><strong id="remainingAmount">₩ 0</strong></div>
 
-      <section class="right">
-        <div class="summary-grid">
-          <div class="summary-card">
-            <div class="small">총 현재금액</div>
-            <div id="totalCurrent" class="big">₩ 0</div>
-          </div>
-          <div class="summary-card">
-            <div class="small">총 정산금액</div>
-            <div id="totalSettlement" class="big">₩ 0</div>
-          </div>
-          <div class="summary-card">
-            <div class="small">총 남은금액</div>
-            <div id="totalRemaining" class="big">₩ 0</div>
-          </div>
-        </div>
+      <div class="btn-row">
+        <button id="addBtn" class="primary" type="button">등록</button>
+        <button id="resetBtn" type="button">초기화</button>
+      </div>
 
-        <div class="card list-card">
-          <div class="list-title">정산 메모장</div>
-          <div id="list"></div>
-        </div>
-      </section>
+      <div class="total-box">총 정산금액 <strong id="totalSettlement">₩ 0</strong></div>
     </div>
+
+    <div id="list" class="list"></div>
   </div>
 
   <script>
@@ -305,9 +240,7 @@
     const currentInput = document.getElementById('currentAmount');
     const settlementInput = document.getElementById('settlementAmount');
     const remainingAmountEl = document.getElementById('remainingAmount');
-    const totalCurrentEl = document.getElementById('totalCurrent');
     const totalSettlementEl = document.getElementById('totalSettlement');
-    const totalRemainingEl = document.getElementById('totalRemaining');
     const listEl = document.getElementById('list');
     const addBtn = document.getElementById('addBtn');
     const resetBtn = document.getElementById('resetBtn');
@@ -333,12 +266,16 @@
       return numeric ? Number(numeric).toLocaleString('ko-KR') : '';
     }
 
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
     function loadItems() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return [
-          { id: Date.now(), date: getToday(), title: '샘플 정산', currentAmount: 250000, settlementAmount: 80000 }
-        ];
+        if (!raw) return [];
         const parsed = JSON.parse(raw);
         return Array.isArray(parsed) ? parsed : [];
       } catch (e) {
@@ -355,24 +292,18 @@
     function updateRemainingPreview() {
       const current = parseNumber(currentInput.value);
       const settlement = parseNumber(settlementInput.value);
-      const remain = current - settlement;
-      remainingAmountEl.textContent = `₩ ${formatNumber(remain)}`;
+      remainingAmountEl.textContent = `₩ ${formatNumber(current - settlement)}`;
     }
 
-    function updateSummary() {
-      const totalCurrent = items.reduce((sum, item) => sum + item.currentAmount, 0);
+    function updateTotalSettlement() {
       const totalSettlement = items.reduce((sum, item) => sum + item.settlementAmount, 0);
-      const totalRemaining = items.reduce((sum, item) => sum + (item.currentAmount - item.settlementAmount), 0);
-
-      totalCurrentEl.textContent = `₩ ${formatNumber(totalCurrent)}`;
       totalSettlementEl.textContent = `₩ ${formatNumber(totalSettlement)}`;
-      totalRemainingEl.textContent = `₩ ${formatNumber(totalRemaining)}`;
     }
 
     function renderList() {
       if (!items.length) {
         listEl.innerHTML = '<div class="empty">등록된 정산 내역이 없습니다.</div>';
-        updateSummary();
+        updateTotalSettlement();
         return;
       }
 
@@ -388,18 +319,9 @@
               <button class="delete-btn" data-id="${item.id}" type="button">삭제</button>
             </div>
             <div class="item-grid">
-              <div class="mini-box">
-                <div class="small">현재금액</div>
-                <div class="big">₩ ${formatNumber(item.currentAmount)}</div>
-              </div>
-              <div class="mini-box">
-                <div class="small">정산금액</div>
-                <div class="big">₩ ${formatNumber(item.settlementAmount)}</div>
-              </div>
-              <div class="mini-box">
-                <div class="small">남은금액</div>
-                <div class="big">₩ ${formatNumber(remain)}</div>
-              </div>
+              <div class="mini">현재금액<strong>₩ ${formatNumber(item.currentAmount)}</strong></div>
+              <div class="mini">정산금액<strong>₩ ${formatNumber(item.settlementAmount)}</strong></div>
+              <div class="mini">남은금액<strong>₩ ${formatNumber(remain)}</strong></div>
             </div>
           </div>
         `;
@@ -414,13 +336,7 @@
         });
       });
 
-      updateSummary();
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+      updateTotalSettlement();
     }
 
     function resetForm() {
@@ -448,15 +364,14 @@
         return;
       }
 
-      const newItem = {
+      items.unshift({
         id: Date.now(),
         date: dateInput.value || getToday(),
         title,
         currentAmount: parseNumber(currentInput.value),
         settlementAmount: parseNumber(settlementInput.value)
-      };
+      });
 
-      items.unshift(newItem);
       saveItems();
       renderList();
       resetForm();
