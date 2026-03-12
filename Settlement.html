@@ -1,0 +1,264 @@
+import React, { useMemo, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { NotebookPen, CalendarDays, Wallet, ReceiptText, MinusCircle, RotateCcw, Trash2, Plus } from "lucide-react";
+
+const formatNumber = (value: string | number) => {
+  const num = typeof value === "number" ? value : Number(String(value).replace(/,/g, ""));
+  if (!num && num !== 0) return "";
+  return num.toLocaleString("ko-KR");
+};
+
+const toNumber = (value: string) => {
+  const cleaned = String(value).replace(/[^0-9.-]/g, "");
+  return cleaned === "" ? 0 : Number(cleaned);
+};
+
+const todayString = () => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+function MoneyInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₩</span>
+      <Input
+        value={value}
+        inputMode="numeric"
+        placeholder={placeholder}
+        className="pl-8 h-11 rounded-2xl"
+        onChange={(e) => {
+          const numeric = e.target.value.replace(/[^0-9]/g, "");
+          onChange(numeric ? formatNumber(numeric) : "");
+        }}
+      />
+    </div>
+  );
+}
+
+export default function SettlementWidget() {
+  const [form, setForm] = useState({
+    date: todayString(),
+    title: "",
+    currentAmount: "",
+    settlementAmount: "",
+  });
+
+  const [items, setItems] = useState([
+    {
+      id: 1,
+      date: todayString(),
+      title: "샘플 정산",
+      currentAmount: 250000,
+      settlementAmount: 80000,
+    },
+  ]);
+
+  const remainingAmount = useMemo(() => {
+    return toNumber(form.currentAmount) - toNumber(form.settlementAmount);
+  }, [form.currentAmount, form.settlementAmount]);
+
+  const totalCurrent = items.reduce((sum, item) => sum + item.currentAmount, 0);
+  const totalSettlement = items.reduce((sum, item) => sum + item.settlementAmount, 0);
+  const totalRemaining = items.reduce((sum, item) => sum + (item.currentAmount - item.settlementAmount), 0);
+
+  const addItem = () => {
+    if (!form.title.trim()) return;
+    setItems((prev) => [
+      {
+        id: Date.now(),
+        date: form.date,
+        title: form.title,
+        currentAmount: toNumber(form.currentAmount),
+        settlementAmount: toNumber(form.settlementAmount),
+      },
+      ...prev,
+    ]);
+    setForm({
+      date: todayString(),
+      title: "",
+      currentAmount: "",
+      settlementAmount: "",
+    });
+  };
+
+  const resetForm = () => {
+    setForm({
+      date: todayString(),
+      title: "",
+      currentAmount: "",
+      settlementAmount: "",
+    });
+  };
+
+  const removeItem = (id: number) => {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  return (
+    <div className="min-h-screen bg-neutral-100 p-4 md:p-8">
+      <div className="mx-auto max-w-5xl grid gap-6 lg:grid-cols-[380px_1fr]">
+        <Card className="rounded-[28px] border-0 shadow-lg bg-white/95 backdrop-blur">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 text-neutral-500">
+              <NotebookPen className="h-4 w-4" />
+              <span className="text-sm">정산 메모 위젯</span>
+            </div>
+            <CardTitle className="text-2xl font-semibold tracking-tight">정산 기록 입력</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">날짜</label>
+              <div className="relative">
+                <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="date"
+                  value={form.date}
+                  className="pl-10 h-11 rounded-2xl"
+                  onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">제목</label>
+              <div className="relative">
+                <ReceiptText className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={form.title}
+                  placeholder="예: 3월 외주 정산"
+                  className="pl-10 h-11 rounded-2xl"
+                  onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">현재금액</label>
+              <MoneyInput
+                value={form.currentAmount}
+                placeholder="현재 보유 금액"
+                onChange={(value) => setForm((prev) => ({ ...prev, currentAmount: value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">정산금액</label>
+              <MoneyInput
+                value={form.settlementAmount}
+                placeholder="이번 정산 금액"
+                onChange={(value) => setForm((prev) => ({ ...prev, settlementAmount: value }))}
+              />
+            </div>
+
+            <div className="rounded-3xl bg-neutral-50 p-4 border border-neutral-200">
+              <div className="flex items-center gap-2 text-sm text-neutral-500 mb-2">
+                <MinusCircle className="h-4 w-4" />
+                남은금액
+              </div>
+              <div className="text-3xl font-semibold tracking-tight">
+                ₩ {formatNumber(remainingAmount)}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <Button className="h-11 rounded-2xl" onClick={addItem}>
+                <Plus className="h-4 w-4 mr-1" />
+                등록
+              </Button>
+              <Button variant="outline" className="h-11 rounded-2xl" onClick={resetForm}>
+                <RotateCcw className="h-4 w-4 mr-1" />
+                초기화
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card className="rounded-[24px] border-0 shadow-md">
+              <CardContent className="p-5">
+                <div className="text-sm text-neutral-500">총 현재금액</div>
+                <div className="mt-2 text-2xl font-semibold">₩ {formatNumber(totalCurrent)}</div>
+              </CardContent>
+            </Card>
+            <Card className="rounded-[24px] border-0 shadow-md">
+              <CardContent className="p-5">
+                <div className="text-sm text-neutral-500">총 정산금액</div>
+                <div className="mt-2 text-2xl font-semibold">₩ {formatNumber(totalSettlement)}</div>
+              </CardContent>
+            </Card>
+            <Card className="rounded-[24px] border-0 shadow-md">
+              <CardContent className="p-5">
+                <div className="text-sm text-neutral-500">총 남은금액</div>
+                <div className="mt-2 text-2xl font-semibold">₩ {formatNumber(totalRemaining)}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="rounded-[28px] border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Wallet className="h-5 w-5" />
+                정산 메모장
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {items.length === 0 ? (
+                  <div className="rounded-3xl border border-dashed p-10 text-center text-neutral-500">
+                    등록된 정산 내역이 없습니다.
+                  </div>
+                ) : (
+                  items.map((item) => {
+                    const remain = item.currentAmount - item.settlementAmount;
+                    return (
+                      <div
+                        key={item.id}
+                        className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm"
+                      >
+                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                          <div className="space-y-3 flex-1">
+                            <div className="text-sm text-neutral-500">{item.date}</div>
+                            <div className="text-xl font-semibold">{item.title}</div>
+                            <div className="grid gap-3 sm:grid-cols-3">
+                              <div className="rounded-2xl bg-neutral-50 p-3">
+                                <div className="text-xs text-neutral-500">현재금액</div>
+                                <div className="mt-1 font-semibold">₩ {formatNumber(item.currentAmount)}</div>
+                              </div>
+                              <div className="rounded-2xl bg-neutral-50 p-3">
+                                <div className="text-xs text-neutral-500">정산금액</div>
+                                <div className="mt-1 font-semibold">₩ {formatNumber(item.settlementAmount)}</div>
+                              </div>
+                              <div className="rounded-2xl bg-neutral-50 p-3">
+                                <div className="text-xs text-neutral-500">남은금액</div>
+                                <div className="mt-1 font-semibold">₩ {formatNumber(remain)}</div>
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full"
+                            onClick={() => removeItem(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
