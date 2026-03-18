@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>정산 메모 위젯</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background: #ffffff;
+      color: #333;
+    }
+    .wrap {
+      max-width: 320px; /* 위젯 크기에 맞춰 대폭 축소 */
+      margin: 0 auto;
+      padding: 12px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0 0 4px;
+      color: #111;
+    }
+    .total-text {
+      font-size: 12px;
+      color: #666;
+    }
+    .total-amount {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111;
+      display: block;
+      margin-top: 2px;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .field { flex: 1; }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #555;
+    }
+    .input {
+      width: 100%;
+      height: 32px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 0 8px;
+      font-size: 12px;
+      outline: none;
+    }
+    .input:focus { border-color: #111; }
+    .remain-box {
+      text-align: right;
+      font-size: 12px;
+      margin-bottom: 12px;
+      color: #555;
+    }
+    .remain-box strong {
+      color: #e53935;
+      font-size: 14px;
+    }
+    .btn-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    button {
+      flex: 1;
+      height: 34px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .primary {
+      background: #111;
+      color: #fff;
+      border-color: #111;
+    }
+    .list-container {
+      border-top: 1px solid #eee;
+      padding-top: 12px;
+    }
+    .empty {
+      text-align: center;
+      font-size: 12px;
+      color: #999;
+      padding: 20px 0;
+    }
+    .item {
+      position: relative;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .item-head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      padding-right: 40px; /* 삭제 버튼 공간 확보 */
+    }
+    .item-details {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #666;
+    }
+    .item-details span { flex: 1; text-align: right; }
+    .item-details span:first-child { text-align: left; }
+    .item-details strong { color: #111; }
+    .delete-btn {
+      position: absolute;
+      right: 0;
+      top: 6px;
+      width: auto;
+      height: 24px;
+      padding: 0 8px;
+      font-size: 10px;
+      border-radius: 4px;
+      background: #f8f8f8;
+      border: 1px solid #ddd;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1 class="title">정산 메모장</h1>
+      <span class="total-text">총 정산금액</span>
+      <strong class="total-amount" id="totalSettlement">₩ 0</strong>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="date">날짜</label>
+        <input id="date" class="input" type="date" />
+      </div>
+      <div class="field">
+        <label for="title">제목</label>
+        <input id="title" class="input" type="text" placeholder="예: 3월 정산" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="currentAmount">현재금액</label>
+        <input id="currentAmount" class="input" type="text" inputmode="numeric" placeholder="₩ 0" />
+      </div>
+      <div class="field">
+        <label for="settlementAmount">정산금액</label>
+        <input id="settlementAmount" class="input" type="text" inputmode="numeric" placeholder="₩ 0" />
+      </div>
+    </div>
+
+    <div class="remain-box">
+      남은금액: <strong id="remainingAmount">₩ 0</strong>
+    </div>
+
+    <div class="btn-row">
+      <button id="addBtn" class="primary" type="button">등록</button>
+      <button id="resetBtn" type="button">초기화</button>
+    </div>
+
+    <div class="list-container" id="list"></div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'settlement-widget-items-v2';
+
+    const dateInput = document.getElementById('date');
+    const titleInput = document.getElementById('title');
+    const currentInput = document.getElementById('currentAmount');
+    const settlementInput = document.getElementById('settlementAmount');
+    const remainingAmountEl = document.getElementById('remainingAmount');
+    const totalSettlementEl = document.getElementById('totalSettlement');
+    const listEl = document.getElementById('list');
+    const addBtn = document.getElementById('addBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function getToday() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function parseNumber(value) {
+      return Number(String(value || '').replace(/[^0-9.-]/g, '')) || 0;
+    }
+
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString('ko-KR');
+    }
+
+    function formatInputValue(value) {
+      const numeric = String(value).replace(/[^0-9]/g, '');
+      return numeric ? formatNumber(numeric) : '';
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function loadItems() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    let items = loadItems();
+
+    function saveItems() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function updateRemainingPreview() {
+      const current = parseNumber(currentInput.value);
+      const settlement = parseNumber(settlementInput.value);
+      remainingAmountEl.textContent = `₩ ${formatNumber(current - settlement)}`;
+    }
+
+    function updateTotalSettlement() {
+      const totalSettlement = items.reduce((sum, item) => sum + item.settlementAmount, 0);
+      totalSettlementEl.textContent = `₩ ${formatNumber(totalSettlement)}`;
+    }
+
+    function renderList() {
+      if (!items.length) {
+        listEl.innerHTML = '<div class="empty">등록된 정산 내역이 없습니다.</div>';
+        updateTotalSettlement();
+        return;
+      }
+
+      listEl.innerHTML = items.map(item => {
+        const remain = item.currentAmount - item.settlementAmount;
+        return `
+          <div class="item">
+            <div class="item-head">
+              <span>${item.date}</span>
+              <span>${escapeHtml(item.title)}</span>
+            </div>
+            <div class="item-details">
+              <span>현재: ${formatNumber(item.currentAmount)}</span>
+              <span>정산: ${formatNumber(item.settlementAmount)}</span>
+              <span>잔액: <strong>${formatNumber(remain)}</strong></span>
+            </div>
+            <button class="delete-btn" data-id="${item.id}" type="button">삭제</button>
+          </div>
+        `;
+      }).join('');
+
+      listEl.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+          const id = Number(this.dataset.id);
+          items = items.filter(item => item.id !== id);
+          saveItems();
+          renderList();
+        });
+      });
+
+      updateTotalSettlement();
+    }
+
+    function resetForm() {
+      dateInput.value = getToday();
+      titleInput.value = '';
+      currentInput.value = '';
+      settlementInput.value = '';
+      updateRemainingPreview();
+    }
+
+    dateInput.value = getToday();
+
+    [currentInput, settlementInput].forEach(input => {
+      input.addEventListener('input', e => {
+        e.target.value = formatInputValue(e.target.value);
+        updateRemainingPreview();
+      });
+    });
+
+    addBtn.addEventListener('click', function () {
+      const title = titleInput.value.trim();
+      if (!title) {
+        alert('제목을 입력하세요.');
+        titleInput.focus();
+        return;
+      }
+
+      items.unshift({
+        id: Date.now(),
+        date: dateInput.value || getToday(),
+        title,
+        currentAmount: parseNumber(currentInput.value),
+        settlementAmount: parseNumber(settlementInput.value)
+      });
+
+      saveItems();
+      renderList();
+      resetForm();
+    });
+
+    resetBtn.addEventListener('click', resetForm);
+
+    updateRemainingPreview();
+    renderList();
+  </script>
+</body>
+</html>
