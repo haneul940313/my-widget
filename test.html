@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>자세히보기 버튼</title>
+</head>
+<body>
+  <button id="detailButton">자세히보기</button>
+  <span id="message" style="display: none; margin-left: 10px;">안녕하세요</span>
+
+  <script>
+    const button = document.getElementById('detailButton');
+    const message = document.getElementById('message');
+
+    button.addEventListener('click', function () {
+      message.style.display = 'inline';
+    });
+  </script>
+</body>
+</html>
